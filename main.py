@@ -82,79 +82,53 @@ def get_dataframe(data_rows):
             num_cur_set = score_home[-1] + score_away[-1] + 1
         cur_set.append(num_cur_set)
 
-        #for num_set in range(1, num_cur_set + 1): # сделать как-то через цикл
-            #locals()["points_home_" + str(num_set) + "_set"].append(...)
+        # Определяем количество выигранных очков в каждом сете для каждого игрока
+        # Пример запроса:
+        # Получить количество выигранных очков 1-ого игрока во 2 сете:
+        #row.find_element("xpath",
+        #                 ".//div[@class='event__part event__part--home event__part--2']").text)
+        # Может возникнуть ситуация, когда во время обновления очков на сайте для одного из игроков
+        # для текущего сета название @class немного изменяется (к нему добавляется "highlighted")
+        # То есть, например, вместо @class='event__part event__part--home event__part--2' может быть
+        #                           @class='event__part event__part--home highlighted event__part--2'
+        # Этот момент тоже нужно учитывать, иначе возникнет ошибка
+        str_home_begin = ".//div[@class=\'event__part event__part--home "
+        str_away_begin = ".//div[@class=\'event__part event__part--away "
+        str_middle = "event__part--"
+        str_addition = "highlighted "
+        str_ending = "\']"
+        for num_set in range(1, num_cur_set + 1): # сделать как-то через цикл
+            points_home = 0
+            points_away = 0
+            str_end_tmp = str_middle + str(num_set) + str_ending
 
-        # 1 сет игрок 1
-        try:
-            points_home_1_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--home event__part--1']").text))
-        except Exception:
-            points_home_1_set.append(0)
+            try:
+                str_home_temp = str_home_begin + str_end_tmp
+                points_home = int(row.find_element("xpath", str_home_temp).text)
+            except Exception:
+                # Если получили исключение - добавляем "highlighted" к названию класса
+                str_home_add = str_home_begin + str_addition + str_end_tmp
+                points_home = int(row.find_element("xpath", str_home_add).text)
 
-        # 1 сет игрок 2
-        try:
-            points_away_1_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--away event__part--1']").text))
-        except Exception:
-            points_away_1_set.append(0)
+            try:
+                str_away_temp = str_away_begin + str_end_tmp
+                points_away = int(row.find_element("xpath", str_away_temp).text)
+            except Exception:
+                # Если получили исключение - добавляем "highlighted" к названию класса
+                str_away_add = str_away_begin + str_addition + str_end_tmp
+                points_away = int(row.find_element("xpath", str_away_add).text)
 
-        # 2 сет игрок 1
-        try:
-            points_home_2_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--home event__part--2']").text))
-        except Exception:
-            points_home_2_set.append(0)
+            locals()["points_home_" + str(num_set) + "_set"].append(points_home)
+            locals()["points_away_" + str(num_set) + "_set"].append(points_away)
 
-        # 2 сет игрок 2
-        try:
-            points_away_2_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--away event__part--2']").text))
-        except Exception:
-            points_away_2_set.append(0)
+        # Заполняем счёт в оставшихся сетах 0, так как данные по еще не начатым сетам
+        # мы не можем прочитать
+        max_set = 5 # максимальное число сетов
+        for num_set in range(num_cur_set + 1, max_set + 1):
+            locals()["points_home_" + str(num_set) + "_set"].append(0)
+            locals()["points_away_" + str(num_set) + "_set"].append(0)
 
-        # 3 сет игрок 1
-        try:
-            points_home_3_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--home event__part--3']").text))
-        except Exception:
-            points_home_3_set.append(0)
-
-        # 3 сет игрок 2
-        try:
-            points_away_3_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--away event__part--3']").text))
-        except Exception:
-            points_away_3_set.append(0)
-
-        # 4 сет игрок 1
-        try:
-            points_home_4_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--home event__part--4']").text))
-        except Exception:
-            points_home_4_set.append(0)
-
-        # 4 сет игрок 2
-        try:
-            points_away_4_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--away event__part--4']").text))
-        except Exception:
-            points_away_4_set.append(0)
-
-        # 5 сет игрок 1
-        try:
-            points_home_5_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--home event__part--5']").text))
-        except Exception:
-            points_home_5_set.append(0)
-
-        # 5 сет игрок 2
-        try:
-            points_away_5_set.append(int(row.find_element("xpath",
-                                    ".//div[@class='event__part event__part--away event__part--5']").text))
-        except Exception:
-            points_away_5_set.append(0)
-
+    # Собираем получившиеся поля в один список
     d = {"cur_set": cur_set,
          "participant_home": participant_home,
          "participant_away": participant_away,
@@ -170,6 +144,8 @@ def get_dataframe(data_rows):
          "points_away_4_set": points_away_4_set,
          "points_home_5_set": points_home_5_set,
          "points_away_5_set": points_away_5_set}
+
+    # Создаем из списка датафрейм
     df = pd.DataFrame(d)
 
     #print(df) # вывод обрезанной части датафрейма
