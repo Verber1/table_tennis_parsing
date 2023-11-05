@@ -4,12 +4,17 @@ import pandas as pd
 from prettytable import PrettyTable
 import time
 
-# Считываем данные с flashscore возвращаем данные со страницы с live-матчами
-def read_web_page():
-    url = "https://www.flashscorekz.com/table-tennis/"
-    geckodriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
+geckodriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
+is_parse_flashscore = True
 
-    #url = 'https://tennis-score.pro/live_v2/' #Лига ПРО
+# Считываем данные с сайтов flashscore или tennis-score
+def read_web_page():
+
+    url = ''
+    if is_parse_flashscore:
+        url = 'https://www.flashscorekz.com/table-tennis/' # Нет результатов по российским лигам
+    else:
+        url = 'https://tennis-score.pro/live_v2/data.php' # Есть результаты по российским лигам
 
     service = Service(executable_path=geckodriver_path)
     driver = webdriver.Firefox(service=service)
@@ -17,16 +22,18 @@ def read_web_page():
 
     time.sleep(3)
 
-    # Находим все текущие live-матчи
-    data_rows = driver.find_elements("xpath", "//div[@class='event__match event__match--live event__match--twoLine']")
+    data_rows = []
+    # Находим все текущие live-матчи, если парсим с flashscore
+    if is_parse_flashscore:
+        data_rows = driver.find_elements("xpath", "//div[@class='event__match event__match--live event__match--twoLine']")
 
-    return data_rows
+    return driver, data_rows
 
 
-# Заполняем таблицу с результатами матчей
-def get_dataframe(data_rows):
+# Заполняем таблицу с результатами матчей по данным с сайта flashscore
+def get_dataframe_from_flashscore(data_rows):
 
-    print('Количество лайв-матчей:', len(data_rows), '\n')
+    print('Количество лайв-матчей (flashscore):', len(data_rows), '\n')
 
     # Список полей
     # Текущий сет (Пример вывода: 3)
@@ -97,7 +104,7 @@ def get_dataframe(data_rows):
         str_middle = "event__part--"
         str_addition = "highlighted "
         str_ending = "\']"
-        for num_set in range(1, num_cur_set + 1): # сделать как-то через цикл
+        for num_set in range(1, num_cur_set + 1):
             points_home = 0
             points_away = 0
             str_end_tmp = str_middle + str(num_set) + str_ending
@@ -154,6 +161,137 @@ def get_dataframe(data_rows):
     # Возвращаем датафрейм
     return df
 
+# Заполняем таблицу с результатами матчей по данным с сайта tennis-score
+def get_dataframe_from_tennis_score(driver):
+
+    data_rows = driver.find_elements("xpath", "//*[@class='table align-middle bg-white overflow-hidden']/tbody/tr")
+    num_matches = len(data_rows)
+    print('Количество лайв-матчей (tennis-score):', num_matches, '\n')
+
+    # Список полей
+    # Текущий сет (Пример вывода: 3)
+    cur_set = []
+    # Игрок 1 (Пример вывода: Ivanov I.)
+    participant_home = []
+    # Игрок 2 (Пример вывода: Иванов И.)
+    participant_away = []
+    # Количество выигранных сетов 1-ого игрока (Пример вывода: 3)
+    score_home = []
+    # Количество выигранных сетов 2-ого игрока (Пример вывода: 2)
+    score_away = []
+    # Игрок 1: число очков в 1-м сете
+    points_home_1_set = []
+    # Игрок 2: число очков в 1-м сете
+    points_away_1_set = []
+    # Игрок 1: число очков в 2-м сете
+    points_home_2_set = []
+    # Игрок 2: число очков в 2-м сете
+    points_away_2_set = []
+    # Игрок 1: число очков в 3-м сете
+    points_home_3_set = []
+    # Игрок 2: число очков в 3-м сете
+    points_away_3_set = []
+    # Игрок 1: число очков в 4-м сете
+    points_home_4_set = []
+    # Игрок 2: число очков в 4-м сете
+    points_away_4_set = []
+    # Игрок 1: число очков в 5-м сете
+    points_home_5_set = []
+    # Игрок 2: число очков в 5-м сете
+    points_away_5_set = []
+
+    # Данные по матчам берём напрямую из таблицы, обращаясь к элементам таблицы через индексы
+    # Итерироваться по строкам (матчам) нужно с индекса tr[1]
+    # Столбец с игроками можно получить по индексу td[2]
+    # Столбец со счётом можно получить по индексу td[3]
+    for match in range(1, num_matches + 1):
+        # Находим строку с очками по каждому сету, а также количество выигранных сетов
+        # Строка с очками приходит в следующем виде:
+        # '2 '\n' 11 '\n' 5 '\n' 11 '\n' 3 '\n' 1 '\n' 4 '\n' 11 '\n' 8 '\n' 2 '\n' 55'
+        # Последнее число в строке означает сумму всех выигранных очков
+        # Расшифровывается строка так:
+        # +---+----+----+----+----+
+        # | С |  1 |  2 |  3 |  4 |
+        # +---+----+----+----+----+
+        # | 2 | 11 |  5 | 11 |  3 |
+        # | 1 |  4 | 11 |  8 |  2 |
+        # +---+----+----+----+----+
+        # ([0] используем потому что возвращается список, но в списке по индексу [1] ничего нет,
+        # вся информация находится в элементе с индексом [0])
+        points_str = driver.find_elements("xpath", "//*[@class= "
+                                                   "'table align-middle bg-white overflow-hidden']"
+                                                   "/tbody/tr[" + str(match) + "]/td[3]")[0].text
+        # Создаем из строки с очками список
+        points = points_str.split('\n')
+         # Удаляем значение с суммой всех выигранных очков
+        del points[-1]
+        # Определяем номер текущего сета
+        num_cur_set = int((len(points) - 2) / 2)
+        # Если число сетов больше 5 - пропускаем матч
+        if num_cur_set > 5:
+            continue
+        cur_set.append(num_cur_set)
+        # Разбиваем список на два списка (очки для каждого игрока)
+        points_home_str = points[:len(points) // 2]
+        points_away_str = points[len(points) // 2:]
+        # Сохраняем число выигранных сетов кадым игроком
+        score_home.append(int(points_home_str[0]))
+        score_away.append(int(points_away_str[0]))
+        # Удаляем число выигранных сетов кадым игроком из списка
+        del points_home_str[0]
+        del points_away_str[0]
+        # Заполняем список с выигранными очками по каждому сету для каждого игрока
+        for num_set in range(1, num_cur_set + 1):
+            idx = num_set - 1
+            locals()["points_home_" + str(num_set) + "_set"].append(int(points_home_str[idx]))
+            locals()["points_away_" + str(num_set) + "_set"].append(int(points_away_str[idx]))
+
+        # Заполняем счёт в оставшихся сетах 0, так как данные по еще не начатым сетам
+        # мы не можем прочитать
+        max_set = 5  # максимальное число сетов
+        for num_set in range(num_cur_set + 1, max_set + 1):
+            locals()["points_home_" + str(num_set) + "_set"].append(0)
+            locals()["points_away_" + str(num_set) + "_set"].append(0)
+
+        # Находим строку с игроками
+        # Строка с игроками приходит в следующем виде:
+        # 'Иванов Иван (Рос) '\n' Петров Петр (Рос)'
+        # ([0] используем потому что возвращается список, но в списке по индексу [1] ничего нет,
+        # вся информация находится в элементе с индексом [0])
+        players_str = driver.find_elements("xpath", "//*[@class= "
+                                                    "'table align-middle bg-white overflow-hidden']"
+                                                    "/tbody/tr[" + str(match) + "]/td[2]")[0].text
+        # Создаем из строки с игроками список
+        players = players_str.split('\n')
+        participant_home.append(players[0])
+        participant_away.append(players[1])
+
+    # Собираем получившиеся поля в один список
+    d = {"cur_set": cur_set,
+         "participant_home": participant_home,
+         "participant_away": participant_away,
+         "score_home": score_home,
+         "score_away": score_away,
+         "points_home_1_set": points_home_1_set,
+         "points_away_1_set": points_away_1_set,
+         "points_home_2_set": points_home_2_set,
+         "points_away_2_set": points_away_2_set,
+         "points_home_3_set": points_home_3_set,
+         "points_away_3_set": points_away_3_set,
+         "points_home_4_set": points_home_4_set,
+         "points_away_4_set": points_away_4_set,
+         "points_home_5_set": points_home_5_set,
+         "points_away_5_set": points_away_5_set}
+
+    # Создаем из списка датафрейм
+    df = pd.DataFrame(d)
+
+    # print(df) # вывод обрезанной части датафрейма
+    # print(df.to_string()) # полный вывод датафрейма
+
+    # Возвращаем датафрейм
+    return df
+
 # Вывести в консоль данные по матчам в виде таблицы
 # Пример вывода:
 # +-----+-----------+---+----+----+----+----+----+
@@ -184,9 +322,15 @@ def print_matchs_from_dataframe(dataframe):
 
 def main():
     # Считываем данные с flashscore возвращаем данные со страницы с live-матчами
-    data_rows = read_web_page()
+    driver, data_rows = read_web_page()
     # Получаем датафрейм с данными лайв-матчей в настольном теннисе
-    df = get_dataframe(data_rows)
+    df = []
+    if is_parse_flashscore:
+        df = get_dataframe_from_flashscore(data_rows)
+    else:
+        df = get_dataframe_from_tennis_score(driver)
+    # Закрываем драйвер
+    driver.quit()
     # Печатаем каждый матч из датафрейма в виде таблицы
     print_matchs_from_dataframe(df)
 
