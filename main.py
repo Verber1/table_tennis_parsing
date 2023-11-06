@@ -8,7 +8,7 @@ import time
 geckodriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
 # Флаг, сообщающий о том, что парсинг будет осуществляться с сайта flashscore,
 # в ином случае парсить будем с сайта tennis-score.pro
-is_parse_flashscore = True
+is_parse_flashscore = False
 # Максимальное число сетов (устанавливаем 7, так как встречаются матчи с 7-ю сетами)
 max_set = 7
 
@@ -317,6 +317,71 @@ def get_dataframe_from_tennis_score(driver):
     # Возвращаем датафрейм
     return df
 
+# Анализируем датафрейм на предмет подходящих для ставки матчей
+# (ищем матч, в котором 3 последних сета подряд заканчиваются с одинаковым счётом)
+def dataframe_analysis(dataframe):
+
+    # Итерируемся по матчам
+    for index, df in dataframe.iterrows():
+
+        # Номер текущего сета
+        num_cur_set = df['cur_set']
+
+        # Если текущий сет меньше 4, значит в этом матче еще не может быть
+        # ситуации, когда 3 последних сета подряд заканчиваются с одинаковым счётом
+        # Поэтому такой матч не рассматриваем
+        if num_cur_set < 4:
+            continue
+
+        # Сумма очков в текущем раунде
+        sum_points_cur_set = df['points_home_' + str(num_cur_set) + '_set'] \
+                           + df['points_away_' + str(num_cur_set) + '_set']
+
+        # Также если в текущем сете было разыграно больше 3-х очков, то такой матч тоже
+        # не рассматриваем, потому что даже если прошлые три сета закончились с одинаковым счётом,
+        # то мы уже не успеем сделать ставку, что этот сет закончится с другим счётом
+        if sum_points_cur_set > 3:
+            continue
+
+        # Номер предыдущего сета
+        num_prev_set = num_cur_set - 1
+        # Для поиска игр, в которых 3 последних сета подряд заканчиваются с одинаковым счётом
+        # будем сравнивать разницу очков за сет, а также максимальное количество очков, набранное за сет
+        delta_points = int(abs(df['points_home_' + str(num_prev_set) + '_set'] \
+                             - df['points_away_' + str(num_prev_set) + '_set']))
+
+        max_points_in_set = int(max(df['points_home_' + str(num_prev_set) + '_set'],
+                                    df['points_away_' + str(num_prev_set) + '_set']))
+
+        # флаг означающий, что игра, в которой 3 последних сета подряд заканчиваются
+        # с одинаковым счётом, был найден
+        is_find_math = True
+
+        # Итерируемся по оставшимся двум сетам
+        for num_set in range(num_cur_set - 2, num_cur_set - 4, -1):
+
+            # Находим дельту очков и максимум
+            delta_p = int(abs(df['points_home_' + str(num_set) + '_set'] \
+                            - df['points_away_' + str(num_set) + '_set']))
+
+            max_p = int(max(df['points_home_' + str(num_set) + '_set'],
+                            df['points_away_' + str(num_set) + '_set']))
+
+            # Сравниваем значения. Если значения не совпадают - выходи из цикла и переходим к следующему матчу
+            if delta_points != delta_p or max_points_in_set != max_p:
+                is_find_math = False
+                break
+
+        # Если текущая игра, в которой 3 последних сета подряд заканчиваются
+        # с одинаковым счётом, была найдена - выводим таблицу по ней,
+        # если нет - переходим к следующей игре
+        if is_find_math:
+            print_matchs_from_dataframe(df)
+        else:
+            continue
+
+
+
 # Вывести в консоль данные по матчам в виде таблицы
 # Пример вывода:
 # +-----+-----------+---+----+----+----+----+----+----+----+
@@ -358,8 +423,10 @@ def main():
         df = get_dataframe_from_tennis_score(driver)
     # Закрываем драйвер
     driver.quit()
+    # Анализируем датафрейм на предмет подходящих для ставки матчей
+    dataframe_analysis(df)
     # Печатаем каждый матч из датафрейма в виде таблицы
-    print_matchs_from_dataframe(df)
+    #print_matchs_from_dataframe(df)
 
 if __name__ == '__main__':
     main()
