@@ -4,8 +4,13 @@ import pandas as pd
 from prettytable import PrettyTable
 import time
 
+# Путь к расположению firefoxdriver для использования в selenium
 geckodriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
+# Флаг, сообщающий о том, что парсинг будет осуществляться с сайта flashscore,
+# в ином случае парсить будем с сайта tennis-score.pro
 is_parse_flashscore = True
+# Максимальное число сетов (устанавливаем 7, так как встречаются матчи с 7-ю сетами)
+max_set = 7
 
 # Считываем данные с сайтов flashscore или tennis-score
 def read_web_page():
@@ -66,6 +71,14 @@ def get_dataframe_from_flashscore(data_rows):
     points_home_5_set = []
     # Игрок 2: число очков в 5-м сете
     points_away_5_set = []
+    # Игрок 1: число очков в 6-м сете
+    points_home_6_set = []
+    # Игрок 2: число очков в 6-м сете
+    points_away_6_set = []
+    # Игрок 1: число очков в 7-м сете
+    points_home_7_set = []
+    # Игрок 2: число очков в 7-м сете
+    points_away_7_set = []
 
     for row in data_rows:
         # Игрок 1 (Пример вывода: Иванов А.)
@@ -130,7 +143,6 @@ def get_dataframe_from_flashscore(data_rows):
 
         # Заполняем счёт в оставшихся сетах 0, так как данные по еще не начатым сетам
         # мы не можем прочитать
-        max_set = 5 # максимальное число сетов
         for num_set in range(num_cur_set + 1, max_set + 1):
             locals()["points_home_" + str(num_set) + "_set"].append(0)
             locals()["points_away_" + str(num_set) + "_set"].append(0)
@@ -150,7 +162,11 @@ def get_dataframe_from_flashscore(data_rows):
          "points_home_4_set": points_home_4_set,
          "points_away_4_set": points_away_4_set,
          "points_home_5_set": points_home_5_set,
-         "points_away_5_set": points_away_5_set}
+         "points_away_5_set": points_away_5_set,
+         "points_home_6_set": points_home_6_set,
+         "points_away_6_set": points_away_6_set,
+         "points_home_7_set": points_home_7_set,
+         "points_away_7_set": points_away_7_set}
 
     # Создаем из списка датафрейм
     df = pd.DataFrame(d)
@@ -199,6 +215,14 @@ def get_dataframe_from_tennis_score(driver):
     points_home_5_set = []
     # Игрок 2: число очков в 5-м сете
     points_away_5_set = []
+    # Игрок 1: число очков в 6-м сете
+    points_home_6_set = []
+    # Игрок 2: число очков в 6-м сете
+    points_away_6_set = []
+    # Игрок 1: число очков в 7-м сете
+    points_home_7_set = []
+    # Игрок 2: число очков в 7-м сете
+    points_away_7_set = []
 
     # Данные по матчам берём напрямую из таблицы, обращаясь к элементам таблицы через индексы
     # Итерироваться по строкам (матчам) нужно с индекса tr[1]
@@ -227,9 +251,6 @@ def get_dataframe_from_tennis_score(driver):
         del points[-1]
         # Определяем номер текущего сета
         num_cur_set = int((len(points) - 2) / 2)
-        # Если число сетов больше 5 - пропускаем матч
-        if num_cur_set > 5:
-            continue
         cur_set.append(num_cur_set)
         # Разбиваем список на два списка (очки для каждого игрока)
         points_home_str = points[:len(points) // 2]
@@ -248,7 +269,7 @@ def get_dataframe_from_tennis_score(driver):
 
         # Заполняем счёт в оставшихся сетах 0, так как данные по еще не начатым сетам
         # мы не можем прочитать
-        max_set = 5  # максимальное число сетов
+
         for num_set in range(num_cur_set + 1, max_set + 1):
             locals()["points_home_" + str(num_set) + "_set"].append(0)
             locals()["points_away_" + str(num_set) + "_set"].append(0)
@@ -281,7 +302,11 @@ def get_dataframe_from_tennis_score(driver):
          "points_home_4_set": points_home_4_set,
          "points_away_4_set": points_away_4_set,
          "points_home_5_set": points_home_5_set,
-         "points_away_5_set": points_away_5_set}
+         "points_away_5_set": points_away_5_set,
+         "points_home_6_set": points_home_6_set,
+         "points_away_6_set": points_away_6_set,
+         "points_home_7_set": points_home_7_set,
+         "points_away_7_set": points_away_7_set}
 
     # Создаем из списка датафрейм
     df = pd.DataFrame(d)
@@ -294,28 +319,30 @@ def get_dataframe_from_tennis_score(driver):
 
 # Вывести в консоль данные по матчам в виде таблицы
 # Пример вывода:
-# +-----+-----------+---+----+----+----+----+----+
-# | Cет |           | С |  1 |  2 |  3 |  4 |  5 |
-# |-----+-----------+---+----+----+----+----+----|
-# |  5  | Иванов И. | 2 | 11 |  9 | 11 |  8 |  8 |
-# |     | Иванов П. | 2 |  9 | 11 |  7 | 11 |  5 |
-# +-----+-----------+---+----+----+----+----+----+
+# +-----+-----------+---+----+----+----+----+----+----+----+
+# | Cет |           | С |  1 |  2 |  3 |  4 |  5 |  6 |  7 |
+# |-----+-----------+---+----+----+----+----+----|----+----|
+# |  5  | Иванов И. | 2 | 11 |  9 | 11 |  8 |  8 |  0 |  0 |
+# |     | Иванов П. | 2 |  9 | 11 |  7 | 11 |  5 |  0 |  0 |
+# +-----+-----------+---+----+----+----+----+----+----+----+
 def print_matchs_from_dataframe(dataframe):
 
     for index, df in dataframe.iterrows():
 
         my_table = PrettyTable()
-        my_table.field_names = ["Сет", " ", "С", "1", "2", "3", "4", "5"]
+        my_table.field_names = ["Сет", " ", "С", "1", "2", "3", "4", "5", "6", "7"]
 
         my_table.add_row([df['cur_set'], df['participant_home'], df['score_home'],
                           df['points_home_1_set'], df['points_home_2_set'],
                           df['points_home_3_set'], df['points_home_4_set'],
-                          df['points_home_5_set']])
+                          df['points_home_5_set'], df['points_home_6_set'],
+                          df['points_home_7_set']])
     
         my_table.add_row([ " ", df['participant_away'], df['score_away'],
                           df['points_away_1_set'], df['points_away_2_set'],
                           df['points_away_3_set'], df['points_away_4_set'],
-                          df['points_away_5_set']])
+                          df['points_away_5_set'], df['points_away_6_set'],
+                          df['points_away_7_set']])
 
         print(my_table, '\n')
 
