@@ -433,5 +433,45 @@ def main():
     # Печатаем каждый матч из датафрейма в виде таблицы
     #print_matches_from_dataframe(df)
 
+# Тестирование функции для анализа игр
+def test_work():
+    # Список полей
+    # Текущий сет (Пример вывода: 3)
+    cur_set = [5]
+    # Игрок 1 (Пример вывода: Ivanov I.)
+    participant_home = ['Ivanov Ivan']
+    # Игрок 2 (Пример вывода: Иванов И.)
+    participant_away = ['Petrov Petr']
+    # Количество выигранных сетов 1-ого игрока (Пример вывода: 3)
+    score_home = [2]
+    # Количество выигранных сетов 2-ого игрока (Пример вывода: 2)
+    score_away = [2]
+    points_home_1_set = [11]; points_away_1_set = [9]
+    points_home_2_set = [8];  points_away_2_set = [11]
+    points_home_3_set = [11]; points_away_3_set = [8]
+    points_home_4_set = [8];  points_away_4_set = [11]
+    points_home_5_set = [2];  points_away_5_set = [1]
+    points_home_6_set = [0];  points_away_6_set = [0]
+    points_home_7_set = [0];  points_away_7_set = [0]
+
+    # Собираем получившиеся поля в один список
+    d = {"cur_set": cur_set,
+         "participant_home": participant_home,   "participant_away": participant_away,
+         "score_home": score_home,               "score_away": score_away,
+         "points_home_1_set": points_home_1_set, "points_away_1_set": points_away_1_set,
+         "points_home_2_set": points_home_2_set, "points_away_2_set": points_away_2_set,
+         "points_home_3_set": points_home_3_set, "points_away_3_set": points_away_3_set,
+         "points_home_4_set": points_home_4_set, "points_away_4_set": points_away_4_set,
+         "points_home_5_set": points_home_5_set, "points_away_5_set": points_away_5_set,
+         "points_home_6_set": points_home_6_set, "points_away_6_set": points_away_6_set,
+         "points_home_7_set": points_home_7_set, "points_away_7_set": points_away_7_set}
+
+    # Создаем из списка датафрейм
+    df = pd.DataFrame(d)
+    # Анализируем игру
+    dataframe_analysis(df)
+
 if __name__ == '__main__':
     main()
+    #test_work()
+
