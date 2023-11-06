@@ -376,13 +376,19 @@ def dataframe_analysis(dataframe):
         # с одинаковым счётом, была найдена - выводим таблицу по ней,
         # если нет - переходим к следующей игре
         if is_find_math:
-            print_matchs_from_dataframe(df)
+            print_match_from_dataframe(df)
         else:
             continue
 
 
 
 # Вывести в консоль данные по матчам в виде таблицы
+def print_matches_from_dataframe(dataframe):
+
+    for index, df in dataframe.iterrows():
+        print_match_from_dataframe(df)
+
+# Вывести в консоль данные по конкретному матчу по строке из датафрейма
 # Пример вывода:
 # +-----+-----------+---+----+----+----+----+----+----+----+
 # | Cет |           | С |  1 |  2 |  3 |  4 |  5 |  6 |  7 |
@@ -390,27 +396,26 @@ def dataframe_analysis(dataframe):
 # |  5  | Иванов И. | 2 | 11 |  9 | 11 |  8 |  8 |  0 |  0 |
 # |     | Иванов П. | 2 |  9 | 11 |  7 | 11 |  5 |  0 |  0 |
 # +-----+-----------+---+----+----+----+----+----+----+----+
-def print_matchs_from_dataframe(dataframe):
+def print_match_from_dataframe(df):
 
-    for index, df in dataframe.iterrows():
+    my_table = PrettyTable()
+    my_table.field_names = ["Сет", " ", "С", "1", "2", "3", "4", "5", "6", "7"]
 
-        my_table = PrettyTable()
-        my_table.field_names = ["Сет", " ", "С", "1", "2", "3", "4", "5", "6", "7"]
+    # 1-ая строка таблицы
+    my_table.add_row([df['cur_set'], df['participant_home'], df['score_home'],
+                      df['points_home_1_set'], df['points_home_2_set'],
+                      df['points_home_3_set'], df['points_home_4_set'],
+                      df['points_home_5_set'], df['points_home_6_set'],
+                      df['points_home_7_set']])
 
-        my_table.add_row([df['cur_set'], df['participant_home'], df['score_home'],
-                          df['points_home_1_set'], df['points_home_2_set'],
-                          df['points_home_3_set'], df['points_home_4_set'],
-                          df['points_home_5_set'], df['points_home_6_set'],
-                          df['points_home_7_set']])
-    
-        my_table.add_row([ " ", df['participant_away'], df['score_away'],
-                          df['points_away_1_set'], df['points_away_2_set'],
-                          df['points_away_3_set'], df['points_away_4_set'],
-                          df['points_away_5_set'], df['points_away_6_set'],
-                          df['points_away_7_set']])
+    # 2-ая строка таблицы
+    my_table.add_row([" ", df['participant_away'], df['score_away'],
+                      df['points_away_1_set'], df['points_away_2_set'],
+                      df['points_away_3_set'], df['points_away_4_set'],
+                      df['points_away_5_set'], df['points_away_6_set'],
+                      df['points_away_7_set']])
 
-        print(my_table, '\n')
-
+    print(my_table, '\n')
 
 def main():
     # Считываем данные с flashscore возвращаем данные со страницы с live-матчами
@@ -426,7 +431,7 @@ def main():
     # Анализируем датафрейм на предмет подходящих для ставки матчей
     dataframe_analysis(df)
     # Печатаем каждый матч из датафрейма в виде таблицы
-    #print_matchs_from_dataframe(df)
+    #print_matches_from_dataframe(df)
 
 if __name__ == '__main__':
     main()
