@@ -1,8 +1,10 @@
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 import pandas as pd
 from prettytable import PrettyTable
 import time
+import io
 
 # Путь к расположению firefoxdriver для использования в selenium
 geckodriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
@@ -22,7 +24,9 @@ def read_web_page():
         url = 'https://tennis-score.pro/live_v2/data.php' # Есть результаты по российским лигам
 
     service = Service(executable_path=geckodriver_path)
-    driver = webdriver.Firefox(service=service)
+    options = Options()
+    options.add_argument('--headless') # запускаем браузер в фоновом режиме (без интерфейса)
+    driver = webdriver.Firefox(service=service, options=options)
     driver.get(url)
 
     time.sleep(3)
@@ -182,7 +186,12 @@ def get_dataframe_from_tennis_score(driver):
 
     data_rows = driver.find_elements("xpath", "//*[@class='table align-middle bg-white overflow-hidden']/tbody/tr")
     num_matches = len(data_rows)
-    print('Количество лайв-матчей (tennis-score):', num_matches, '\n')
+
+    # Текущее время
+    t = time.localtime()
+    current_time = time.strftime("%H:%M:%S", t)
+
+    print(current_time, 'Количество лайв-матчей (tennis-score):', num_matches)
 
     # Список полей
     # Текущий сет (Пример вывода: 3)
@@ -321,6 +330,9 @@ def get_dataframe_from_tennis_score(driver):
 # (ищем матч, в котором 3 последних сета подряд заканчиваются с одинаковым счётом)
 def dataframe_analysis(dataframe):
 
+    # Список матчей для вывода в текстовом формате
+    output_text_res = []
+
     # Итерируемся по матчам
     for index, df in dataframe.iterrows():
 
@@ -355,8 +367,8 @@ def dataframe_analysis(dataframe):
 
         # флаг означающий, что игра, в которой 3 последних сета подряд заканчиваются
         # с одинаковым счётом, был найден
-        is_find_math = True
-
+        is_find_match = True
+        
         # Итерируемся по оставшимся двум сетам
         for num_set in range(num_cur_set - 2, num_cur_set - 4, -1):
 
@@ -369,17 +381,19 @@ def dataframe_analysis(dataframe):
 
             # Сравниваем значения. Если значения не совпадают - выходи из цикла и переходим к следующему матчу
             if delta_points != delta_p or max_points_in_set != max_p:
-                is_find_math = False
+                is_find_match = False
                 break
 
         # Если текущая игра, в которой 3 последних сета подряд заканчиваются
         # с одинаковым счётом, была найдена - выводим таблицу по ней,
         # если нет - переходим к следующей игре
-        if is_find_math:
-            print_match_from_dataframe(df)
+        if is_find_match:
+            out_val = print_match_from_dataframe(df)
+            output_text_res.append(out_val)
         else:
             continue
 
+    return output_text_res
 
 
 # Вывести в консоль данные по матчам в виде таблицы
@@ -415,7 +429,23 @@ def print_match_from_dataframe(df):
                       df['points_away_5_set'], df['points_away_6_set'],
                       df['points_away_7_set']])
 
-    print(my_table, '\n')
+    #print(my_table, '\n')
+    # print(my_table, '\n', file=output)
+
+    output = io.StringIO()
+    print(df['cur_set'], "-ый сет: ",df['participant_home'], ' ', df['score_home'], " - ",
+                                     df['participant_away'], ' ', df['score_away'], ":", '\n',
+          '(',df['points_home_1_set'], '-', df['points_away_1_set'], '), ',
+          '(', df['points_home_2_set'], '-', df['points_away_2_set'], '), ',
+          '(', df['points_home_3_set'], '-', df['points_away_3_set'], '), ',
+          '(', df['points_home_4_set'], '-', df['points_away_4_set'], '), ',
+          '(', df['points_home_5_set'], '-', df['points_away_5_set'], '), ',
+          '(', df['points_home_6_set'], '-', df['points_away_6_set'], '), ',
+          '(', df['points_home_7_set'], '-', df['points_away_7_set'], '), ',
+          '\n', sep='', file=output)
+
+    output_text_res = output.getvalue()
+    return output_text_res
 
 def main():
     # Считываем данные с flashscore возвращаем данные со страницы с live-матчами
@@ -429,9 +459,11 @@ def main():
     # Закрываем драйвер
     driver.quit()
     # Анализируем датафрейм на предмет подходящих для ставки матчей
-    dataframe_analysis(df)
+    output_text_res = dataframe_analysis(df)
     # Печатаем каждый матч из датафрейма в виде таблицы
     #print_matches_from_dataframe(df)
+
+    return output_text_res
 
 # Тестирование функции для анализа игр
 def test_work():
@@ -469,7 +501,9 @@ def test_work():
     # Создаем из списка датафрейм
     df = pd.DataFrame(d)
     # Анализируем игру
-    dataframe_analysis(df)
+    output_text_res = dataframe_analysis(df)
+
+    return output_text_res
 
 #if __name__ == '__main__':
     #main()
