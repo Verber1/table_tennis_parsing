@@ -22,6 +22,7 @@ dp = Dispatcher()
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     #await message.answer("Hello!")
+    await message.answer('Запуск...')
     while True:
         #output_value = TableTennisParsing.test_work()
         output_text_res = TableTennisParsing.main()

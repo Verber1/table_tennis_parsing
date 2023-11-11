@@ -14,6 +14,10 @@ is_parse_flashscore = False
 # Максимальное число сетов (устанавливаем 7, так как встречаются матчи с 7-ю сетами)
 max_set = 7
 
+# Турниры, игры в которых не рассматриваем (нет ставок на матчи в этих турнирах)
+#block_tournament = ['Мастерс', 'TSC Pro', 'Pro Spin Series']
+block_tournament = ['1223232']
+
 # Считываем данные с сайтов flashscore или tennis-score
 def read_web_page():
 
@@ -194,6 +198,8 @@ def get_dataframe_from_tennis_score(driver):
     print(current_time, 'Количество лайв-матчей (tennis-score):', num_matches)
 
     # Список полей
+    # Название турнира (Пример вывода: Лига Про)
+    tournament_name = []
     # Текущий сет (Пример вывода: 3)
     cur_set = []
     # Игрок 1 (Пример вывода: Ivanov I.)
@@ -237,7 +243,26 @@ def get_dataframe_from_tennis_score(driver):
     # Итерироваться по строкам (матчам) нужно с индекса tr[1]
     # Столбец с игроками можно получить по индексу td[2]
     # Столбец со счётом можно получить по индексу td[3]
+    # Столбец с названием турнира можно получить по индексу td[12]
     for match in range(1, num_matches + 1):
+
+        # Находим название турнира, в рамках которого играется матч, и смотрим, нет ли этого
+        # турнира в списке заблокированных. Если этот турнир входит в список заблокированных,
+        # тогда этот матч не учитываем
+        tournament = driver.find_elements("xpath", "//*[@class= "
+                                                   "'table align-middle bg-white overflow-hidden']"
+                                                   "/tbody/tr[" + str(match) + "]/td[12]")[0].text
+        find_block_tournament = False
+        for block_t in block_tournament:
+            if tournament.find(block_t) != -1:
+                find_block_tournament = True
+                break
+
+        if find_block_tournament:
+            continue
+
+        tournament_name.append(tournament)
+
         # Находим строку с очками по каждому сету, а также количество выигранных сетов
         # Строка с очками приходит в следующем виде:
         # '2 '\n' 11 '\n' 5 '\n' 11 '\n' 3 '\n' 1 '\n' 4 '\n' 11 '\n' 8 '\n' 2 '\n' 55'
@@ -296,8 +321,11 @@ def get_dataframe_from_tennis_score(driver):
         participant_home.append(players[0])
         participant_away.append(players[1])
 
+    print('Из них рассматриваем только', len(tournament_name), 'матчей')
+
     # Собираем получившиеся поля в один список
-    d = {"cur_set": cur_set,
+    d = {"tournament_name": tournament_name,
+         "cur_set": cur_set,
          "participant_home": participant_home,
          "participant_away": participant_away,
          "score_home": score_home,
@@ -428,13 +456,14 @@ def print_match_from_dataframe(df):
                       df['points_away_3_set'], df['points_away_4_set'],
                       df['points_away_5_set'], df['points_away_6_set'],
                       df['points_away_7_set']])
-
+    #print(df['tournament_name'])
     #print(my_table, '\n')
     # print(my_table, '\n', file=output)
 
     output = io.StringIO()
-    print(df['cur_set'], "-ый сет: ",df['participant_home'], ' ', df['score_home'], " - ",
-                                     df['participant_away'], ' ', df['score_away'], ":", '\n',
+    print(df['tournament_name'], '\n', df['cur_set'], "-ый сет: ",
+          df['participant_home'], ' ', df['score_home'], " - ",
+          df['participant_away'], ' ', df['score_away'], ":", '\n',
           '(',df['points_home_1_set'], '-', df['points_away_1_set'], '), ',
           '(', df['points_home_2_set'], '-', df['points_away_2_set'], '), ',
           '(', df['points_home_3_set'], '-', df['points_away_3_set'], '), ',
@@ -468,6 +497,8 @@ def main():
 # Тестирование функции для анализа игр
 def test_work():
     # Список полей
+    # Название турнира (Пример вывода: Лига Про)
+    tournament_name = ['Лига Про']
     # Текущий сет (Пример вывода: 3)
     cur_set = [5]
     # Игрок 1 (Пример вывода: Ivanov I.)
@@ -487,7 +518,8 @@ def test_work():
     points_home_7_set = [0];  points_away_7_set = [0]
 
     # Собираем получившиеся поля в один список
-    d = {"cur_set": cur_set,
+    d = {"tournament_name": tournament_name,
+         "cur_set": cur_set,
          "participant_home": participant_home,   "participant_away": participant_away,
          "score_home": score_home,               "score_away": score_away,
          "points_home_1_set": points_home_1_set, "points_away_1_set": points_away_1_set,
