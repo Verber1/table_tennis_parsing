@@ -13,6 +13,10 @@ geckodriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
 is_parse_flashscore = False
 # Максимальное число сетов (устанавливаем 7, так как встречаются матчи с 7-ю сетами)
 max_set = 7
+# Создаем датафрейм, который хранит в себе имена игроков из матча с нужным результатом
+# Это нужно для того, чтобы по несколько раз не выводить данные по матчу,
+# так как данные по игре с нужным результатом должны выводиться только один раз, чтобы не было СПАМа
+df_with_need_result_game = pd.DataFrame(columns=['player_home', 'player_away'])
 
 # Турниры, игры в которых не рассматриваем (нет ставок на матчи в этих турнирах)
 #block_tournament = ['Мастерс', 'TSC Pro', 'Pro Spin Series']
@@ -416,10 +420,16 @@ def dataframe_analysis(dataframe):
         # с одинаковым счётом, была найдена - выводим таблицу по ней,
         # если нет - переходим к следующей игре
         if is_find_match:
-            out_val = print_match_from_dataframe(df)
-            output_text_res.append(out_val)
+            # Проверяем, что данные по этой игре еще не выводилсь
+            # Если данные уже выводилсь - больше не выводим
+            if check_game_in_base(df['participant_home'], df['participant_away']) == False:
+                out_val = print_match_from_dataframe(df)
+                output_text_res.append(out_val)
         else:
             continue
+
+    # Удаляем закончившиеся игры из базы, так как в этих игах уже нет надобности
+    delete_completed_matches_from_base(dataframe)
 
     return output_text_res
 
@@ -475,6 +485,58 @@ def print_match_from_dataframe(df):
 
     output_text_res = output.getvalue()
     return output_text_res
+
+# Проверям, что найденная игра с нужным счётом еще не существует в базе, и если это так - добавляем игру в базу
+def check_game_in_base(participant_home, participant_away):
+    is_game_exists_in_base = False
+    if (len(df_with_need_result_game)) > 0:
+        for index, df in df_with_need_result_game.iterrows():
+            if (df['player_home'] == participant_home) & (df['player_away'] == participant_away):
+                is_game_exists_in_base = True
+
+    # Если игра не была найдена в базе - добавляем её туда
+    if is_game_exists_in_base == False:
+        df_with_need_result_game.loc[len(df_with_need_result_game.index)] = [participant_home, participant_away]
+        print("Игра ", participant_home, " - ", participant_away, " была добавлена в список игр! Размер списка: ",
+              len(df_with_need_result_game), sep="")
+
+    return is_game_exists_in_base
+
+# Удалить закончившиеся игры из базы, так как в этих игах уже нет надобности
+def delete_completed_matches_from_base(dataframe_live):
+    if (len(df_with_need_result_game)) == 0:
+        return
+
+    # Проходим по матчам в базе и смотрим, не осталось ли там матчей, которые уже закончились
+    # (то есть этих матчей уже нет в списке live-матчей)
+    list_idx = [] # индексы матчей в базе, которые уже закончились
+    for idx_row_base, df_base in df_with_need_result_game.iterrows():
+        is_live_match_find = False
+        for idx_row_live, df_live in dataframe_live.iterrows():
+
+            if (df_live['participant_home'] == df_base['player_home']) &\
+               (df_live['participant_away'] == df_base['player_away']):
+                is_live_match_find = True
+                break
+
+        if is_live_match_find == False:
+            list_idx.append(idx_row_base)
+
+    if len(list_idx) > 0:
+        for idx in list_idx:
+            try:
+                print("Игра ", df_with_need_result_game['player_home'].loc[df_with_need_result_game.index[idx]], " - ",
+                               df_with_need_result_game['player_away'].loc[df_with_need_result_game.index[idx]],
+                    " была удалена из списка игр!", sep="")
+            except Exception:
+                print("Ошибка! Не могу вывести данные по удаленной игре")
+                print("Текущая база:")
+                print(df_with_need_result_game)
+                print("Идекс строки базы, которую необходимо удалить:", idx)
+        # Удаляем матчи из базы, которые уже закончились (нет в списке лайв-матчей)
+        df_with_need_result_game.drop(list_idx, inplace=True)
+        print("Список игр после удаления:", len(df_with_need_result_game))
+
 
 def main():
     # Считываем данные с flashscore возвращаем данные со страницы с live-матчами
