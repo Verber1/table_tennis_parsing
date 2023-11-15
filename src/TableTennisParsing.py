@@ -1,13 +1,16 @@
 from selenium import webdriver
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.options import Options
+#from selenium.webdriver.firefox.service import Service
+#from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 import pandas as pd
 from prettytable import PrettyTable
 import time
 import io
 
-# Путь к расположению firefoxdriver для использования в selenium
-geckodriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
+# Путь к расположению webdriver для использования в selenium
+#webdriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
+webdriver_path = r'D:\src_git\table_tennis_parsing\src\chromedriver\chromedriver.exe'
 # Флаг, сообщающий о том, что парсинг будет осуществляться с сайта flashscore,
 # в ином случае парсить будем с сайта tennis-score.pro
 is_parse_flashscore = False
@@ -19,8 +22,8 @@ max_set = 7
 df_with_need_result_game = pd.DataFrame(columns=['player_home', 'player_away'])
 
 # Турниры, игры в которых не рассматриваем (нет ставок на матчи в этих турнирах)
-#block_tournament = ['Мастерс', 'TSC Pro', 'Pro Spin Series']
-block_tournament = ['1223232']
+block_tournament = ['Мастерс', 'TSC Pro', 'Pro Spin Series']
+#block_tournament = ['1223232']
 
 # Считываем данные с сайтов flashscore или tennis-score
 def read_web_page():
@@ -31,10 +34,11 @@ def read_web_page():
     else:
         url = 'https://tennis-score.pro/live_v2/data.php' # Есть результаты по российским лигам
 
-    service = Service(executable_path=geckodriver_path)
+    service = Service(executable_path=webdriver_path)
     options = Options()
     options.add_argument('--headless') # запускаем браузер в фоновом режиме (без интерфейса)
-    driver = webdriver.Firefox(service=service, options=options)
+    #driver = webdriver.Firefox(service=service, options=options)
+    driver = webdriver.Chrome(service=service, options=options)
     driver.get(url)
 
     time.sleep(3)
