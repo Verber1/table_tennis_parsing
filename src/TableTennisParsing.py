@@ -1,4 +1,5 @@
 from selenium import webdriver
+import variables # модуль с переменными из config.ini
 #from selenium.webdriver.firefox.service import Service
 #from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -9,8 +10,7 @@ import time
 import io
 
 # Путь к расположению webdriver для использования в selenium
-#webdriver_path = r'D:\src_git\flashscore parse\firefoxdriver\geckodriver.exe'
-webdriver_path = r'D:\src_git\table_tennis_parsing\src\chromedriver\chromedriver.exe'
+webdriver_path = variables.WEB_DRIVER_PATH
 # Флаг, сообщающий о том, что парсинг будет осуществляться с сайта flashscore,
 # в ином случае парсить будем с сайта tennis-score.pro
 is_parse_flashscore = False
