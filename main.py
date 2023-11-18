@@ -41,7 +41,7 @@ async def parsing_matches():
             for text_res in output_text_res:
                 await bot.send_message(chat_id, text_res)
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(5) # Общее время одного прохода с учетом sleep занимает ~15 секунд
 
 # Запуск процесса поллинга новых апдейтов
 async def main():

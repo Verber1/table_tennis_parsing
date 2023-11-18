@@ -41,8 +41,6 @@ def read_web_page():
     driver = webdriver.Chrome(service=service, options=options)
     driver.get(url)
 
-    time.sleep(3)
-
     data_rows = []
     # Находим все текущие live-матчи, если парсим с flashscore
     if is_parse_flashscore:
