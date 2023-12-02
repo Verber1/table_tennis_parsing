@@ -37,6 +37,8 @@ def read_web_page():
     service = Service(executable_path=webdriver_path)
     options = Options()
     options.add_argument('--headless') # запускаем браузер в фоновом режиме (без интерфейса)
+    if variables.OPERATING_SYSTEM == "Linux":
+        options.add_argument('--no-sandbox')
     #driver = webdriver.Firefox(service=service, options=options)
     driver = webdriver.Chrome(service=service, options=options)
     driver.get(url)

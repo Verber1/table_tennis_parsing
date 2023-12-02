@@ -41,10 +41,13 @@ async def parsing_matches():
             for text_res in output_text_res:
                 await bot.send_message(chat_id, text_res)
 
-        await asyncio.sleep(5) # Общее время одного прохода с учетом sleep занимает ~15 секунд
+        await asyncio.sleep(variables.TIME_PAUSE) # Общее время одного прохода с учетом sleep занимает ~15 секунд
 
 # Запуск процесса поллинга новых апдейтов
 async def main():
+    # При запуске скрипта отправляем сообщение в тг, что бот запущен
+    for chat_id in variables.CHAT_ID:
+        await bot.send_message(chat_id, "Бот запущен...")
     await asyncio.gather(dp.start_polling(bot), parsing_matches())
 
 if __name__ == '__main__':
